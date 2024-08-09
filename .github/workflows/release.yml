@@ -84,12 +84,12 @@ jobs:
       - name: Build Library
         run: yarn build
 
-      - name: Release Please GitHub Action
-        uses: googleapis/release-please-action@v4
-        id: release
-        with:
-          release-type: node
-          token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Release Please GitHub Action
+      #   uses: googleapis/release-please-action@v4
+      #   id: release
+      #   with:
+      #     release-type: node
+      #     token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Shared Components to npm
         if: ${{ steps.release.outputs.release_created }}
