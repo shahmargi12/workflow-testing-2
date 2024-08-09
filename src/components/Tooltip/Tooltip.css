@@ -1,0 +1,94 @@
+.tooltipPortal {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1500;
+    left: 0;
+    top: 0;
+}
+
+.tooltip {
+    box-sizing: border-box;
+    font-family: inherit;
+    width: auto;
+    word-break: break-all;
+    background-color: #000;
+    color: #fff;
+    font-size: 12px;
+    max-width: 360px;
+    font-weight: 500;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin: 10px;
+    line-height: 1.3;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tooltipArrow::after {
+    transform: rotate(45deg);
+    border: 5px solid #000;
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+    content: '';
+}
+
+.tooltipArrow.top.center::after,
+.tooltipArrow.top-start.center::after,
+.tooltipArrow.top-end.center::after {
+    left: calc(50% - 5px);
+    bottom: 5px;
+}
+
+.tooltipArrow.top.start::after,
+.tooltipArrow.top-start.start::after,
+.tooltipArrow.top-end.start::after {
+    left: calc(8% - 5px);
+    bottom: 5px;
+}
+
+.tooltipArrow.top.end::after,
+.tooltipArrow.top-start.end::after,
+.tooltipArrow.top-end.end::after {
+    right: calc(8% - 5px);
+    bottom: 5px;
+}
+
+.tooltipArrow.bottom.center::after,
+.tooltipArrow.bottom-start.center::after,
+.tooltipArrow.bottom-end.center::after {
+    left: calc(50% - 5px);
+    top: 5px;
+}
+
+.tooltipArrow.bottom.start::after,
+.tooltipArrow.bottom-start.start::after,
+.tooltipArrow.bottom-end.start::after {
+    left: calc(8% - 5px);
+    top: 5px;
+}
+
+.tooltipArrow.bottom.end::after,
+.tooltipArrow.bottom-start.end::after,
+.tooltipArrow.bottom-end.end::after {
+    right: calc(8% - 5px);
+    top: 5px;
+}
+
+.tooltipArrow.right::after {
+    top: calc(50% - 5px);
+    left: 5px;
+}
+
+.tooltipArrow.left::after {
+    top: calc(50% - 5px);
+    right: 5px;
+}

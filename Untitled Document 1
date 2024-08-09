@@ -1,0 +1,196 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - src/**
+      - package.json
+      - yarn.lock
+      - CHANGELOG.md
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  
+concurrency:
+  group: library-publish
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version-bumped: ${{ steps.version-check.outputs.bumped }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Get latest git tag
+        id: git-tag-latest
+        uses: actions-ecosystem/action-get-latest-tag@v1
+
+      - name: Remove tag 'v' prefix
+        run: echo "GIT_VERSION=$(echo ${{ steps.git-tag-latest.outputs.tag }} | cut -c2-)" >> $GITHUB_ENV
+
+      - name: Get npm version
+        id: npm-version
+        uses: martinbeentjes/npm-get-version-action@3cf273023a0dda27efcd3164bdfb51908dd46a5b # v1.3.1
+
+      - name: Output versions
+        run: |
+          echo git ${{ env.GIT_VERSION }}
+          echo npm ${{ steps.npm-version.outputs.current-version }}
+
+      - name: Check if version is bumped
+        id: version-check
+        run: |
+          if [[ "${{ env.GIT_VERSION }}" == "${{ steps.npm-version.outputs.current-version }}" ]]; then
+            echo "Versions match. Skipping publish."
+            echo "bumped=false" >> $GITHUB_OUTPUT
+          else
+            echo "Versions do not match. Proceeding with publish."
+            echo "bumped=true" >> $GITHUB_OUTPUT
+          fi
+          
+  build-and-publish:
+    runs-on: ubuntu-latest
+    needs: check-version
+    if: needs.check-version.outputs.version-bumped == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Setup Node
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+
+      - name: Get npm version
+        id: npm-tag
+        uses: martinbeentjes/npm-get-version-action@3cf273023a0dda27efcd3164bdfb51908dd46a5b # v1.3.1
+
+      - name: Install Dependencies
+        run: yarn
+
+      - name: Linter Checks
+        run: yarn lint
+
+      - name: Build Library
+        run: yarn build
+
+      - name: Release Please GitHub Action
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: node
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Update CHANGELOG.md
+      #   id: update-changelog
+      #   run: |
+      #     # Fetch the latest release PR
+      #     pr_number=$(gh pr list --state open --json number,title --jq '.[] | select(.title | startswith("chore(main): release")) | .number' | head -n 1)
+          
+      #     # Fetch PR details
+      #     if [ -z "$pr_number" ]; then
+      #       echo "No release PR found."
+      #       exit 1
+      #     fi
+
+      #     # Get commit messages from the release PR
+      #     commits=$(gh pr view $pr_number --json commits --jq '.commits | .[] | .commit.message' | sed 's/"/\\"/g')
+
+      #     # Format changelog entries with PR titles
+      #     changelog_entries=""
+      #     while IFS= read -r commit_message; do
+      #       pr_title=$(gh pr list --state merged --json title,number --jq ".[] | select(.title == \"$commit_message\") | .title")
+      #       if [ -n "$pr_title" ]; then
+      #         changelog_entries+="- $pr_title (PR #$pr_number)\n"
+      #       fi
+      #     done <<< "$commits"
+
+      #     # Update CHANGELOG.md
+      #     if [ -n "$changelog_entries" ]; then
+      #       sed -i "/## \[Unreleased\]/a \n### Changes\n$changelog_entries" CHANGELOG.md
+      #     fi
+
+      #     # Commit changes
+      #     git config --global user.name 'github-actions'
+      #     git config --global user.email 'github-actions@github.com'
+      #     git add CHANGELOG.md
+      #     git commit -m "Update CHANGELOG.md with PR titles for release"
+      #     git push
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      # - name: Get Release PR Info
+      #   id: get-pr
+      #   run: |
+      #     pr_number=$(gh pr list --state open --json number,title --jq '.[] | select(.title | contains("Release:")) | .number')
+      #     echo "PR_NUMBER=$pr_number" >> $GITHUB_ENV
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Debug PR Titles and Commits
+      #   run: |
+      #     prs=$(gh pr list --state merged --json title,number,mergeCommit)
+      #     echo "$prs" > pr_debug.json
+      #     cat pr_debug.json
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Replace commit messages with PR titles
+      #   run: |
+      #     prs=$(gh pr list --state merged --json title,number,mergeCommit)
+      #     echo "$prs" | jq -c '.[]' | while read -r pr; do
+      #       commit=$(echo "$pr" | jq -r '.mergeCommit.oid')
+      #       title=$(echo "$pr" | jq -r '.title')
+      #       number=$(echo "$pr" | jq -r '.number')
+      #       safe_commit=$(printf '%s' "$commit" | sed 's/[\/&]/\\&/g')
+      #       safe_title=$(printf '%s' "$title" | sed 's/[\/&]/\\&/g')
+      #       echo "Replacing commit $safe_commit with title $safe_title"
+      #       sed -i "s/$safe_commit.*/- $safe_title (PR #$number)/" CHANGELOG.md
+      #     done
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Replace Commit Messages with PR Titles
+      #   if: ${{ env.PR_NUMBER }}
+      #   run: |
+      #     prs=$(gh pr view ${{ env.PR_NUMBER }} --json commits --jq '.commits | .[] | .commit.message')
+      #     echo "$prs" | jq -c '.[]' | while read -r commit_message; do
+      #       commit=$(echo "$commit_message" | jq -r '.commit')
+      #       title=$(gh pr view ${{ env.PR_NUMBER }} --json title --jq '.title')
+      #       safe_commit=$(printf '%s' "$commit" | sed 's/[\/&]/\\&/g')
+      #       safe_title=$(printf '%s' "$title" | sed 's/[\/&]/\\&/g')
+      #       echo "Replacing commit $safe_commit with title $safe_title"
+      #       sed -i "s/$safe_commit.*/- $safe_title/" CHANGELOG.md
+      #     done
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Commit and Push Changes
+      #   if: ${{ env.PR_NUMBER }}
+      #   run: |
+      #     git config --global user.name 'github-actions'
+      #     git config --global user.email 'github-actions@github.com'
+      #     git add CHANGELOG.md
+      #     git commit -m "Update CHANGELOG.md with PR titles"
+      #     git push
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Publish Shared Components to npm
+        if: ${{ steps.release.outputs.release_created }}
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_WORKFLOW }}
+

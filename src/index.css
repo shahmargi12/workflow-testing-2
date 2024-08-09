@@ -1,0 +1,21 @@
+html {
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    font-size: 16px;
+}
+
+.overflowElement {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 200px;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 100vw;
+    align-items: center;
+    justify-content: space-between;
+    justify-items: center;
+    gap: 200px;
+}
