@@ -1,0 +1,72 @@
+name: pr checks
+
+on:
+  pull_request:
+    paths:
+      - src/**
+      - yarn.lock
+      - package.json
+  workflow_dispatch:
+
+jobs:
+  pr-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Get latest git tag
+        id: git-tag-latest
+        uses: actions-ecosystem/action-get-latest-tag@v1
+
+      - name: Remove tag 'v' prefix
+        run: echo "GIT_VERSION=$(echo ${{ steps.git-tag-latest.outputs.tag }} | cut -c2-)" >> $GITHUB_ENV
+
+      - name: Get npm version
+        id: npm-version
+        uses: martinbeentjes/npm-get-version-action@3cf273023a0dda27efcd3164bdfb51908dd46a5b # v1.3.1
+
+      - name: Output versions
+        run: |
+          echo git ${{ env.GIT_VERSION }}
+          echo ${{github.event.pull_request.number}} 
+          echo ${{github.event.number}}
+          echo npm ${{ steps.npm-version.outputs.current-version }}
+          
+      - name: Get release commit messages
+        id: release-commit
+        run: |
+          RELEASE_COMMIT_MESSAGE=$(git log --grep="Release-As: " -1 --pretty=format:"%s")
+          echo "RELEASE_COMMIT_MESSAGE=$RELEASE_COMMIT_MESSAGE" >> $GITHUB_ENV
+
+      - name: Check if tag already exists and not then check release commit is as expected
+        run: |
+          if [[ "${{ env.GIT_VERSION }}" == "${{ steps.npm-version.outputs.current-version }}" ]]; then
+            echo "Versions match. Skipping npm publish on merge"
+          else
+            echo "Versions do not match. Checking if tag exists."
+            tag_exists=$(git tag -l "v${{ steps.npm-version.outputs.current-version }}")
+            if [[ -n "$tag_exists" ]]; then
+              echo "Git tag for npm version already exists."
+              exit 1
+            else
+              echo "Tag does not exist. Checking release commit message."
+              if [[ "${{ env.RELEASE_COMMIT_MESSAGE }}" != *"chore: release ${{ steps.npm-version.outputs.current-version }}"* ]]; then
+                echo "Expected commit message not found. Please run below command: "
+                echo 'git commit --allow-empty -m "chore: release ${{ steps.npm-version.outputs.current-version }}" -m "Release-As: ${{ steps.npm-version.outputs.current-version }}"'
+                exit 1
+              fi
+            fi        
+          fi
+
+      - name: Install Dependencies
+        run: yarn
+
+      - name: Linter Checks
+        run: yarn lint
+
+      - name: Build Library
+        run: yarn build
