@@ -91,11 +91,11 @@ jobs:
       #     release-type: node
       #     token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish Shared Components to npm
-        # if: ${{ steps.release.outputs.release_created }}
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_WORKFLOW }}
+      # - name: Publish Shared Components to npm
+      #   # if: ${{ steps.release.outputs.release_created }}
+      #   run: npm publish
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_WORKFLOW }}
 
       - name: Create git tag
         uses: rickstaa/action-create-tag@a1c7777fcb2fee4f19b0f283ba888afa11678b72
