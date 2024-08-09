@@ -45,15 +45,15 @@ jobs:
       - name: Check if tag already exists and not then check release commit is as expected
         run: |
           if [[ "${{ env.GIT_VERSION }}" == "${{ steps.npm-version.outputs.current-version }}" ]]; then
-            echo "Versions match. Skipping npm publish on merge"
+            echo "Versions match. Proceed to next step"
           else
             echo "Versions do not match. Checking if tag exists."
             tag_exists=$(git tag -l "v${{ steps.npm-version.outputs.current-version }}")
             if [[ -n "$tag_exists" ]]; then
-              echo "Git tag for npm version already exists."
+              echo "Package with ${{steps.npm-version.outputs.current-version}} version already exist. "
               exit 1
             else
-              echo "Tag does not exist. Checking release commit message."
+              echo "Package version does not exist. Checking release commit message."
               if [[ "${{ env.RELEASE_COMMIT_MESSAGE }}" != *"chore: release ${{ steps.npm-version.outputs.current-version }}"* ]]; then
                 echo "Expected commit message not found. Please run below command: "
                 echo 'git commit --allow-empty -m "chore: release ${{ steps.npm-version.outputs.current-version }}" -m "Release-As: ${{ steps.npm-version.outputs.current-version }}"'
