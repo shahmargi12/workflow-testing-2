@@ -5,7 +5,6 @@ function App() {
     return (
         <>
             <h1>Tooltip Demoo</h1>
-            <h2>hi</h2>
             <div className="container">
                 {tooltip.map((tlp, index) => (
                     <Tooltip
