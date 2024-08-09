@@ -60,7 +60,7 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     needs: check-version
-    if: needs.check-version.outputs.version-bumped == 'true'
+    # if: needs.check-version.outputs.version-bumped == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
